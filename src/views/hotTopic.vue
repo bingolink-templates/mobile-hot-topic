@@ -1,16 +1,23 @@
 <template>
-  <div class="main">
+  <div ref="wrap">
     <!-- 热门话题 -->
-    <div class="hot-topic bra">
+    <div class="hot-topic">
       <div class="hot-topic-title flex">
         <text class="f28 fw5 c0">热门话题</text>
         <text class="f24 c153 fw4 pl20 pt10 pb10" @click="hotAllEvent">全部</text>
       </div>
-      <div class="hot-topic-content">
-        <div class="hot-topic-item flex-jc" v-for="(item, index) in hotTopicArr" :key='index' @click='hotTopicEvent'>
-          <div class="flex lines1">
-            <text class="c85 fw4 f24">#复联4首映#</text>
+      <div class="hot-topic-content" v-if='isShowLoad'>
+        <div v-if='hotTopicArr.length!=0' class="hot-topic-item flex-jc" v-for="(item, index) in hotTopicArr"
+          :key='index' @click='hotTopicEvent(item.topicId,item.title)'>
+          <div class="flex">
+            <text class="c85 fw4 f24 topci-left lines1">#{{item.title}}#</text>
             <text class="c0 fw4 f28 lines1 topic-text">个性需求接受or拒绝，揭秘产品组个性需求接受or拒绝，揭秘产品组</text>
+          </div>
+        </div>
+        <div class="no-content flex-ac flex-jc" v-if='hotTopicArr.length==0'>
+          <div class="flex-dr">
+            <bui-image src="/image/sleep.png" width="42px" height="39px"></bui-image>
+            <text class="f26 c51 fw4 pl15 center-height">{{isError?'暂无话题':'加载失败'}}</text>
           </div>
         </div>
       </div>
@@ -19,32 +26,108 @@
 </template>
 
 <script>
+  const link = weex.requireModule("LinkModule");
+  const animation = weex.requireModule('animation')
+  const dom = weex.requireModule('dom');
   export default {
     data() {
       return {
-        hotTopicArr:['','','','','','']
+        hotTopicArr: [],
+        isShowLoad: false,
+        isError: true
       }
     },
     methods: {
-      // 更多
       hotAllEvent() {
-        this.$alert()
+        link.launchLinkService(['[OpenBuiltIn] \n key=BlogTopicMain'], (res) => {}, (err) => {});
       },
-      hotTopicEvent(){
-        this.$alert()
+      hotTopicEvent(id,title) {
+         link.launchLinkService(['[OpenBuiltIn] \n key=BlogTopicList \n topicId='+id+' \n topicTitle='+title], (res) => {},
+         (err) => {});
+      },
+      getToken(success, error) {
+        return new Promise((resolve, reject) => {
+          link.getToken([], res => {
+            resolve(res);
+            success && success(res);
+          }, err => {
+            reject(err);
+            error && error(err);
+          });
+        });
+      },
+      getHotTopicData(url, data, token, success, error) {
+        return new Promise((resolve, reject) => {
+          this.$get({
+            url: url,
+            headers: {
+              'Authorization': 'Bearer ' + token
+            },
+            data: data || {}
+          }).then((res) => {
+            resolve(res);
+            success && success(res);
+          }).catch((reason) => {
+            reject(reason);
+            error && error(reason);
+          })
+        });
+      },
+      getHotTopci() {
+        this.getToken((token) => {
+          link.getServerConfigs([], (params) => {
+            let timestamp = (new Date()).getTime();
+            let objData = {
+              cursor: timestamp,
+              limit: 5
+            }
+            this.getHotTopicData(params.blogUri + '/v1/topic/list/newest',
+              objData,
+              token.accessToken, (res) => {
+                this.isError = true
+                this.isShowLoad = true
+                this.broadcastWidgetHeight()
+                if (res.code == 200) {
+                  this.$alert(res.data)
+                  this.hotTopicArr = res.data
+                } else {}
+              }, (err) => {
+                this.error()
+              })
+          }, () => {
+            this.error()
+          });
+        }, (err) => {
+          this.error()
+        })
+      },
+      error() {
+        this.isError = false
+        this.isShowLoad = true
+        this.broadcastWidgetHeight()
+      },
+      broadcastWidgetHeight() {
+        let _params = this.$getPageParams();
+        setTimeout(() => {
+          dom.getComponentRect(this.$refs.wrap, (ret) => {
+            var channel = new BroadcastChannel('WidgetsMessage')
+            channel.postMessage({
+              widgetHeight: ret.size.height,
+              id: _params.id
+            });
+            channel.close();
+          });
+        }, 100)
       }
+    },
+    mounted() {
+      this.getHotTopci()
     }
   }
 </script>
 
 <style lang="css" src="../css/common.css"></style>
 <style>
-  .main {
-    flex: 1;
-    padding-top: 100px;
-    background-color: #666;
-  }
-
   .hot-topic {
     background-color: #fff;
   }
@@ -56,11 +139,24 @@
 
   .hot-topic-item {
     height: 88px;
-    padding: 0 29px 0 24px;
+    padding: 0 32px 0 24px;
+  }
+
+  .topci-left {
+    width: 160px;
   }
 
   .topic-text {
     width: 511px;
-    margin-left: 20px;
+    margin-left: 6px;
+  }
+
+  .no-content {
+    height: 166px;
+    width: 750px
+  }
+
+  .center-height {
+    line-height: 40px;
   }
 </style>
