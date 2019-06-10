@@ -29,6 +29,7 @@
   const link = weex.requireModule("LinkModule");
   const animation = weex.requireModule('animation')
   const dom = weex.requireModule('dom');
+  const linkapi = require('linkapi');
   export default {
     data() {
       return {
@@ -41,65 +42,35 @@
       hotAllEvent() {
         link.launchLinkService(['[OpenBuiltIn] \n key=BlogTopicMain'], (res) => {}, (err) => {});
       },
-      hotTopicEvent(id,title) {
-         link.launchLinkService(['[OpenBuiltIn] \n key=BlogTopicList \n topicId='+id+' \n topicTitle='+title], (res) => {},
-         (err) => {});
-      },
-      getToken(success, error) {
-        return new Promise((resolve, reject) => {
-          link.getToken([], res => {
-            resolve(res);
-            success && success(res);
-          }, err => {
-            reject(err);
-            error && error(err);
-          });
-        });
-      },
-      getHotTopicData(url, data, token, success, error) {
-        return new Promise((resolve, reject) => {
-          this.$get({
-            url: url,
-            headers: {
-              'Authorization': 'Bearer ' + token
-            },
-            data: data || {}
-          }).then((res) => {
-            resolve(res);
-            success && success(res);
-          }).catch((reason) => {
-            reject(reason);
-            error && error(reason);
-          })
-        });
+      hotTopicEvent(id, title) {
+        link.launchLinkService(['[OpenBuiltIn] \n key=BlogTopicList \n topicId=' + id + ' \n topicTitle=' + title], (res) => {},
+          (err) => {});
       },
       getHotTopci() {
-        this.getToken((token) => {
-          link.getServerConfigs([], (params) => {
-            let timestamp = (new Date()).getTime();
-            let objData = {
-              cursor: timestamp,
-              limit: 5
+        link.getServerConfigs([], (params) => {
+          let timestamp = (new Date()).getTime();
+          let objData = {
+            cursor: timestamp,
+            limit: 5
+          }
+          linkapi.fetch('GET', {
+            url: params.blogUri + '/v1/topic/list/newest',
+            data: objData
+          }).then((res) => {
+            this.isError = true
+            this.isShowLoad = true
+            this.broadcastWidgetHeight()
+            if (res.code == 200) {
+              this.hotTopicArr = res.data
+            } else {
+              
             }
-            this.getHotTopicData(params.blogUri + '/v1/topic/list/newest',
-              objData,
-              token.accessToken, (res) => {
-                this.isError = true
-                this.isShowLoad = true
-                this.broadcastWidgetHeight()
-                if (res.code == 200) {
-                  this.$alert(res.data)
-                  this.hotTopicArr = res.data
-                } else {}
-              }, (err) => {
-                this.error()
-              })
-          }, () => {
+          }, (err) => {
             this.error()
-          });
-        }, (err) => {
+          })
+        }, () => {
           this.error()
-        })
+        });
       },
       error() {
         this.isError = false
