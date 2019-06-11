@@ -3,8 +3,8 @@
     <!-- 热门话题 -->
     <div class="hot-topic">
       <div class="hot-topic-title flex">
-        <text class="f28 fw5 c0">热门话题</text>
-        <text class="f24 c153 fw4 pl20 pt10 pb10" @click="hotAllEvent">全部</text>
+        <text class="f28 fw5 c0">{{i18n.HotTopic}}</text>
+        <text class="f24 c153 fw4 pl20 pt10 pb10" @click="hotAllEvent">{{i18n.All}}</text>
       </div>
       <div class="hot-topic-content" v-if='isShowLoad'>
         <div v-if='hotTopicArr.length!=0' class="hot-topic-item flex-jc" v-for="(item, index) in hotTopicArr"
@@ -17,7 +17,7 @@
         <div class="no-content flex-ac flex-jc" v-if='hotTopicArr.length==0'>
           <div class="flex-dr">
             <bui-image src="/image/sleep.png" width="42px" height="39px"></bui-image>
-            <text class="f26 c51 fw4 pl15 center-height">{{isError?'暂无话题':'加载失败'}}</text>
+            <text class="f26 c51 fw4 pl15 center-height">{{isError?i18n.NoneData:i18n.ErrorLoadData}}</text>
           </div>
         </div>
       </div>
@@ -35,7 +35,9 @@
       return {
         hotTopicArr: [],
         isShowLoad: false,
-        isError: true
+        isError: true,
+        channel: new BroadcastChannel('WidgetsMessage'),
+        i18n: ''
       }
     },
     methods: {
@@ -43,7 +45,8 @@
         link.launchLinkService(['[OpenBuiltIn] \n key=BlogTopicMain'], (res) => {}, (err) => {});
       },
       hotTopicEvent(id, title) {
-        link.launchLinkService(['[OpenBuiltIn] \n key=BlogTopicList \n topicId=' + id + ' \n topicTitle=' + title], (res) => {},
+        link.launchLinkService(['[OpenBuiltIn] \n key=BlogTopicList \n topicId=' + id + ' \n topicTitle=' + title], (
+            res) => {},
           (err) => {});
       },
       getHotTopci() {
@@ -63,7 +66,7 @@
             if (res.code == 200) {
               this.hotTopicArr = res.data
             } else {
-              
+
             }
           }, (err) => {
             this.error()
@@ -81,8 +84,7 @@
         let _params = this.$getPageParams();
         setTimeout(() => {
           dom.getComponentRect(this.$refs.wrap, (ret) => {
-            var channel = new BroadcastChannel('WidgetsMessage')
-            channel.postMessage({
+            this.channel.postMessage({
               widgetHeight: ret.size.height,
               id: _params.id
             });
@@ -91,7 +93,17 @@
         }, 100)
       }
     },
+    created() {
+      linkapi.getLanguage((res) => {
+        this.i18n = this.$window[res]
+      })
+    },
     mounted() {
+      this.channel.onmessage = (event) => {
+        if (event.data.action === 'RefreshData') {
+          this.getHotTopci()
+        }
+      }
       this.getHotTopci()
     }
   }
