@@ -11,7 +11,7 @@
           :key='index' @click='hotTopicEvent(item.topicId,item.title)'>
           <div class="flex">
             <text class="c85 fw4 f24 topci-left lines1">#{{item.title}}#</text>
-            <text class="c0 fw4 f28 lines1 topic-text">个性需求接受or拒绝，揭秘产品组个性需求接受or拒绝，揭秘产品组</text>
+            <text class="c0 fw4 f28 lines1 topic-text"></text>
           </div>
         </div>
         <div class="no-content flex-ac flex-jc" v-if='hotTopicArr.length==0'>
@@ -89,7 +89,7 @@
               id: _params.id
             });
           });
-        }, 100)
+        }, 200)
       }
     },
     created() {
